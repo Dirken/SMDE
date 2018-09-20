@@ -1,2 +1,5 @@
 # SMDE
 STATISTICAL MODELLING AND DESIGN OF EXPERIMENTS
+
+Laboratories from the MIRI subject of SMDE.
+
