@@ -1,0 +1,19 @@
+\contentsline {section}{\numberline {1}FIRST QUESTION: GENERATE A RANDOM SAMPLE}{3}{section.1}
+\contentsline {section}{\numberline {2}SECOND QUESTION: ANOVA}{9}{section.2}
+\contentsline {subsection}{\numberline {2.1}Independence}{9}{subsection.2.1}
+\contentsline {subsection}{\numberline {2.2}Normality}{9}{subsection.2.2}
+\contentsline {subsection}{\numberline {2.3}Homogeneity}{9}{subsection.2.3}
+\contentsline {subsection}{\numberline {2.4}Decathlon}{10}{subsection.2.4}
+\contentsline {subsubsection}{\numberline {2.4.1}100M}{10}{subsubsection.2.4.1}
+\contentsline {subsubsection}{\numberline {2.4.2}Long Jump}{11}{subsubsection.2.4.2}
+\contentsline {subsubsection}{\numberline {2.4.3}Shot Put}{11}{subsubsection.2.4.3}
+\contentsline {subsubsection}{\numberline {2.4.4}High Jump}{12}{subsubsection.2.4.4}
+\contentsline {subsubsection}{\numberline {2.4.5}400M}{13}{subsubsection.2.4.5}
+\contentsline {subsubsection}{\numberline {2.4.6}110M Hurdle}{14}{subsubsection.2.4.6}
+\contentsline {subsubsection}{\numberline {2.4.7}Discus}{14}{subsubsection.2.4.7}
+\contentsline {subsubsection}{\numberline {2.4.8}Pole Vault}{15}{subsubsection.2.4.8}
+\contentsline {subsubsection}{\numberline {2.4.9}Javeline}{16}{subsubsection.2.4.9}
+\contentsline {subsubsection}{\numberline {2.4.10}1500M}{16}{subsubsection.2.4.10}
+\contentsline {subsubsection}{\numberline {2.4.11}Rank \& Points \& Competition}{17}{subsubsection.2.4.11}
+\contentsline {section}{\numberline {3}THIRD QUESTION: DEFINE A LINEAR MODEL FOR AN ATHLETE IN THE 1500M}{18}{section.3}
+\contentsline {section}{\numberline {4}FOURTH QUESTION: WORKING WITH REAL DATA}{24}{section.4}

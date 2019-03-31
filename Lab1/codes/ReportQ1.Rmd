@@ -1,0 +1,628 @@
+---
+title: "First Assignment"
+author: "Ricard Meyerhofer Parra"
+date: "5/10/2018"
+output:
+  pdf_document:
+    fig_caption: yes
+    number_sections: yes
+  html_document: default
+subtitle: STATISTICAL MODELLING AND DESIGN OF EXPERIMENTS
+---
+
+\newpage
+\tableofcontents
+\newpage
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+\section{FIRST QUESTION: GENERATE A RANDOM SAMPLE}
+
+The generator we are going to use is Mersenne Twister random generator with one of the parametrations provided in the SMDE website that pass the Diehard Battery of Tests of Randomness:
+```{cpp parametrization, include=T}
+//This parametrization corresponds to the first one
+unsigned long init[LENGTH]={  
+0x631f1690, 0x25973e32, 0xead6f57, 0x6ec9d844, 0x5c49eaee,
+0x64af49b, 0x397c46bc, 0x7e448de9, 0x5a9cc3e5, 0x1afe3625,
+0x3ca88ecf, 0x6ebe4208, 0xc058df5, 0xcbe5be9, 0x3102bbe2,
+0x26a02c5e, 0x541c8153, 0x67906f60, 0x10db9daa, 0x697d2d2,
+0x6d68ab2, 0x3a966cd0, 0x63f37e85, 0x5895f5fa, 0x38a5d054}; 
+```
+Once executed the algorithm, we are going to save the output as a ".csv" and we will load it in R so that we can start manipulating the data. We are going to analyze 3 samples that correspond to different executions (different sizes) with the same parametrization:
+\begin{itemize}
+\item Sample of 200 elements named "samples.csv".
+\item Sample of 3000 elements named "samples3000.csv".
+\item Sample of 20000 elements named "samples20000.csv".
+\end{itemize}
+For all of these samples we will follow the same procedure and see if the size affects our results.
+
+```{r read-files, include=T}
+#Loading data and setting environment:
+setwd("C:/Users/Meyerhofer/Desktop/SMDELabs")
+mersenne_twister <- read.csv("samples.csv", sep = "\t", header = F)
+```
+Once the data is loaded, we classify it in 6 segments acording to it's position and we see the frequency in which appears to each segment:
+```{r classify-mersenne, include=T}
+mersenne_twister_class = transform(mersenne_twister, cat2 = ifelse(V1 < 0,"0",
+                                                                   ifelse(V1 < 0.2,"0.2",
+                                                                   ifelse(V1 < 0.4,"0.4",
+                                                                   ifelse(V1 < 0.6,"0.6",
+                                                                   ifelse(V1 < 0.8,"0.8","1"))))))
+mersenne_freqs = as.data.frame(with(mersenne_twister_class, table(cat2)))
+```
+Similarly, we create another data sample with a uniform distribution which as Mersenne's Algorithm has values between 0 and 1. This dataset will also be segmented according the same labels we have previously used for Mersenne. Note that to make the sample reproducible, we are using an arbitrary seed.
+
+```{r uniform, include=T}
+set.seed(1234)
+v1=runif(200, min = 0, max = 1)
+#Work with the data as a dataframe.
+taula_v1=data.frame(x1=v1)
+
+#Definition of the intervals, categories to be used.
+taula_v1_cat=transform(taula_v1, cat1 = ifelse(x1 < 0,"0",
+                                               ifelse(x1 < 0.2,"0.2",
+                                               ifelse(x1 < 0.4,"0.4",
+                                               ifelse(x1 < 0.6,"0.6",
+                                               ifelse(x1 < 0.8,"0.8","1"))))))
+```
+Are these two samples similar? We can have a first idea by comparing both histograms and how the data is distributed among each execution.
+```{r hists, include=T,fig.height = 3, fig.width = 6}
+hist(mersenne_twister_class$V1)
+hist(v1)
+
+```
+
+Finally we aggregate both frequencies in a same dataframe. Complementing our histogram's we do two barplots that are aggregating the data in the segments.
+\begin{itemize}
+\item The first one, is a barplot of each of the functions (so that we see how a function is distributing from [0-1]).
+\item The second is each of the segments compared one to each other in the same plot (so we see both functions behave the same).
+\end{itemize}
+```{r barplots, include=T,fig.height = 3, fig.width = 6}
+#Counting the amount of elements in each category “table” function.
+taula_freq_v1=as.data.frame(with(taula_v1_cat, table(cat1)))
+
+taula_freq = rbind(taula_freq_v1$Freq, mersenne_freqs$Freq)
+
+aux = cbind(taula_freq_v1$Freq, mersenne_freqs$Freq)
+```
+We also provide of the frequencies to see which is the data that is being treated in the barplots:
+```{r barplots2, include=T,fig.height = 3, fig.width = 6}
+taula_freq_v1
+mersenne_freqs
+
+barplot(aux, beside=T)
+
+barplot(taula_freq,beside=T)
+```
+
+As we can see, the distribution among the different segments is not what one should expect since we would expect a complete uniformity (all segments with same or almost same number of elements which is not happening with 200 elements). We will see if in the next samples if this shape keeps appearing or if it dissapears and tends to uniformity.
+
+Finally we are going to see if both samples are similar by applying a Chi-Square test:
+```{r chitest, include=T,fig.height = 3, fig.width = 6}
+Test=chisq.test(taula_freq, correct = FALSE) 
+Test
+```
+Chi-square Test. The Chi-Square test of Independence is used to determine if there is a significant relationship between two nominal (categorical) variables. When we apply a Chi-Square test we are formulating the following:
+\begin{itemize}
+\item Ho: The data is consistent with a specified distribution.
+\item Ha: The data is not consistent with a specified distribution.
+\end{itemize}
+
+As the p-value is greater than the 0.05 significance level, we do not reject the null hypothesis therefore, there is relationship between mersenne and uniform distribution (which is expectable at first sight).
+
+As we previosly said, the data was not as balanced as one would expect. Because of this we are going to generate two more executions with the same parametrization: 
+\begin{itemize}
+\item One with 3000 elements
+\item Another with 20000.
+\end{itemize}
+
+```{r 3000elems, include=F}
+mersenne_twister <- read.csv("samples3000.csv", sep = "\t", header = F)
+
+mersenne_twister_class = transform(mersenne_twister, cat2 = ifelse(V1 < 0,"0",
+                                                                   ifelse(V1 < 0.2,"0.2",
+                                                                   ifelse(V1 < 0.4,"0.4",
+                                                                   ifelse(V1 < 0.6,"0.6",
+                                                                   ifelse(V1 < 0.8,"0.8","1"))))))
+mersenne_freqs = as.data.frame(with(mersenne_twister_class, table(cat2)))
+
+
+set.seed(1234)
+v1=runif(3000, min = 0, max = 1)
+summary(v1)
+#Work with the data as a dataframe.
+taula_v1=data.frame(x1=v1)
+
+#Definition of the intervals, categories to be used.
+taula_v1_cat=transform(taula_v1, cat1 = ifelse(x1 < 0,"0",
+                                               ifelse(x1 < 0.2,"0.2",
+                                                      ifelse(x1 < 0.4,"0.4",
+                                                             ifelse(x1 < 0.6,"0.6",
+                                                                    ifelse(x1 < 0.8,"0.8","1"))))))
+
+
+taula_freq_v1=as.data.frame(with(taula_v1_cat, table(cat1)))
+
+taula_freq = rbind(taula_freq_v1$Freq, mersenne_freqs$Freq)
+```
+
+Here we can see that in comparasion with the samples of 200 elements, the segments tend to be equal and the more elements that have, the more equal are.
+```{r hists2, include=T,fig.height = 3, fig.width = 6}
+hist(mersenne_twister_class$V1)
+hist(v1)
+```
+
+```{r 20000elems, include=F}
+mersenne_twister <- read.csv("samples20000.csv", sep = "\t", header = F)
+
+mersenne_twister_class = transform(mersenne_twister, cat2 = ifelse(V1 < 0,"0",
+                                                                   ifelse(V1 < 0.2,"0.2",
+                                                                   ifelse(V1 < 0.4,"0.4",
+                                                                   ifelse(V1 < 0.6,"0.6",
+                                                                   ifelse(V1 < 0.8,"0.8","1"))))))
+mersenne_freqs = as.data.frame(with(mersenne_twister_class, table(cat2)))
+
+
+set.seed(1234)
+v1=runif(20000, min = 0, max = 1)
+summary(v1)
+#Work with the data as a dataframe.
+taula_v1=data.frame(x1=v1)
+
+#Definition of the intervals, categories to be used.
+taula_v1_cat=transform(taula_v1, cat1 = ifelse(x1 < 0,"0",
+                                               ifelse(x1 < 0.2,"0.2",
+                                                      ifelse(x1 < 0.4,"0.4",
+                                                             ifelse(x1 < 0.6,"0.6",
+                                                                    ifelse(x1 < 0.8,"0.8","1"))))))
+
+
+taula_freq_v1=as.data.frame(with(taula_v1_cat, table(cat1)))
+
+taula_freq = rbind(taula_freq_v1$Freq, mersenne_freqs$Freq)
+```
+
+```{r hists3, include=T,fig.height = 3, fig.width = 6}
+hist(mersenne_twister_class$V1)
+hist(v1)
+```
+As a last comment I would like to make note that by doing a Chi-Square test we are not comparing the quality of the RNG or the RVA but what we are doing is to given a RNG that passes the DieHard tests, see if the runif distribution is similar to this RNG so somehow we are comparing if is as good as the Mersenne Twister but not necessarily has to be even that both look alike. 
+\newpage
+
+\section{SECOND QUESTION: ANOVA}
+
+First we are generating three populations and we are going to change one of the parameters and see with the ANOVA if these three populations are different (or not) depending on the parameter selected. In this case, we are going to have three populations following  a normal distribution two with media=0 and one with media=10.
+
+```{r q20, include=F,fig.height = 3, fig.width = 6}
+library(FactoMineR)
+library(Rcmdr)
+```
+
+We create the populations and we merge them in a single data frame in order to use ANOVA.
+
+```{r q21, include=F,fig.height = 3, fig.width = 6}
+Norm_v1=rnorm(200, mean=0, sd=1)
+Norm_v2=rnorm(200, mean=10, sd=1)
+Norm_v3=rnorm(200, mean=0, sd=1)
+
+Norm_v1n=data.frame(x1=Norm_v1, x2="v1")
+Norm_v2n=data.frame(x1=Norm_v2, x2="v2")
+Norm_v3n=data.frame(x1=Norm_v3, x2="v3")
+data=mergeRows(Norm_v1n, Norm_v2n, common.only=FALSE)
+data=mergeRows(as.data.frame(data), Norm_v3n, common.only=FALSE)
+```
+
+Now we can see with the ANOVA if these 3 populations are different:
+
+```{r q22, include=F,fig.height = 3, fig.width = 6}
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+Boxplot(x1~x2, data=data, id.method="y")
+```
+We can conclude from the ANOVA test that since the  p-value is < than 0.05, we can reject the null hypothesis and conclude that these distributions have different means.
+
+Now we are going to proceed with testing the ANOVA assumptions which are the following:
+\begin{itemize}
+\item \textbf{Durbin Watson:} The observations within each sample must be independent.
+\item \textbf{Shapiro test:} The populations from which the samples are selected must be normal.
+\item \textbf{Breusch Pagan test:} The populations from which the samples are selected must have equal variances (homogeneity of variance)
+\end{itemize}
+
+\subsection{Independence}
+Even that we already know that this data is independent from each other since we created them, we have to test it with Durbin Watson test.
+
+```{r durbin-watson, warning=FALSE,message=FALSE}
+library("lmtest")
+dwtest(AnovaModel.1, alternative ="two.sided")
+```
+We can see that the p-value < DL. Therefore,there is no correlation, which implies independece. (Passed the test)
+
+\subsection{Normality}
+We apply the Saphiro test:
+```{r saphiro-test, warning=FALSE,message=FALSE}
+shapiro.test(residuals(AnovaModel.1))
+```
+
+The p-value > 0.05, so we can say that the sample follows a normal distribution (Passed the test).
+
+\subsection{Homogeneity}
+We are going to apply the Breusch Pagan test:
+```{r bp-test, warning=FALSE,message=FALSE}
+lmtest::bptest(AnovaModel.1)
+```
+Two or more normal distributions are homoscedastic if they share a common covariance (or are correlated). A p-value > 0.05 indicates there is homogenety (Passed the test).
+
+\subsection{Decathlon}
+
+In this decathlon dataset, we want to analyze if both competitions achieve different results (we want to see if they are different) in the different disciplines analyzed.
+
+```{r q232, warning=FALSE,message=FALSE}
+# Loading decathlon dataset.
+data(decathlon, package="FactoMineR")
+names(decathlon)
+```
+
+In order to see if they achieve different results, what we are going to do is to apply the assumptions and anova per each of the variables that contains the dataset. In order not to make it very harsh to follow I'm going to make it as synthetic as possible.
+\subsubsection{100M}
+
+```{r d1, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`100m`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+The Durbin-Watson test has a p-value < 0.5 so we can't assume independency. The p-value that Anova gives us is < 0.05 which means that we reject null hypothesis (the distributions are different). We cannot guarantee that the Anova test gives us a right result even that Durbin's assumption is not correct.
+
+\subsubsection{Long Jump}
+```{r d2, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$Long.jump, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+The Durbin-Watson test has a p-value < 0.5 so we can't assume independency.  The p-value that Anova gives us is > 0.05, it means that we accept null hypothesis (the distributions are equal). We cannot guarantee that the Anova test gives us a right result even that Durbin's assumption is not correct.
+
+\subsubsection{Shot Put}
+```{r d3, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$Shot.put, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+All assumptions have a p-value < 0.05. The p-value that Anova gives is > 0.05, it means that we accept null hypothesis( distributions are equal).
+We can not say that Anova result is confident since all assumptions are incorrect.
+
+\subsubsection{High Jump}
+```{r d4, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$High.jump, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+Normality test has p-value < 0.05 so we cannot guarantee normality.  The p-value that Anova gives us is >0.05 so we accept null hypothesis (equal distributions). We can not assume that the Anova test is not correct even Saphiro test is wrong.
+
+\subsubsection{400M}
+```{r d5, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`400m`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+The Durbin-Watson test has a p-value < 0.5 so we can't assume independency.  The p-value that Anova gives us is > 0.05, it means that we accept null hypothesis (the distributions are equal). We cannot guarantee that the Anova test gives us a right result even that Durbin's assumption is not correct.
+
+\subsubsection{110M Hurdle}
+```{r d6, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`110m.hurdle`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+Normality test has p-value < 0.05 so we cannot guarantee normality.  The p-value that Anova gives us is >0.05 so we accept null hypothesis (equal distributions). We can not assume that the Anova test is not correct even Saphiro test is wrong.
+
+\subsubsection{Discus}
+```{r d7, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`Discus`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+Durbin-Watson has a p-value < 0.05 we can not assume independency. 
+The p value that Anova gives us is > 0.05 so these distributions are equal since we accept the null hypothesis but this does not guarantee that Anova gives us the right result.
+\subsubsection{Pole Vault}
+```{r d8, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`Pole.vault`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+Assumptions are correct therefore, we can say that the distributions are equal.
+
+\subsubsection{Javeline}
+```{r javeline, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`Javeline`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+Assumptions are correct therefore, we can say that the distributions are equal.
+
+\subsubsection{1500M}
+```{r 1500m, warning=FALSE,message=FALSE}
+data = data.frame(x1=decathlon$`1500m`, x2=decathlon$Competition)
+AnovaModel.1 <- aov(x1 ~ x2, data=data)
+summary(AnovaModel.1)
+
+#Assumptions
+dwtest(AnovaModel.1, alternative ="two.sided")
+shapiro.test(residuals(AnovaModel.1))
+lmtest::bptest(AnovaModel.1)
+```
+Normality test has p-value < 0.05 so we cannot guarantee normality.  The p-value that Anova gives us is >0.05 so we accept null hypothesis (equal distributions). We can not assume that the Anova test is not correct even Saphiro test is wrong.
+
+\subsubsection{Rank \& Points \& Competition}
+Not variables to measure.
+
+
+
+\newpage
+
+\section{THIRD QUESTION: DEFINE A LINEAR MODEL FOR AN ATHLETE IN THE 1500M}
+First we are going to load our data:
+```{r q3, warning=FALSE,message=FALSE}
+library(Rcmdr)
+data(decathlon, package="FactoMineR")
+
+train <- subset(decathlon, Competition == "Decastar")
+test <- subset(decathlon, Competition == "OlympicG")
+```
+One very naive way to approach this problem, would be to generate a model with all the variables and to "backtrack" throught it by removing variables until the model is very good and seeing with ANOVA if two models are same or not (and ironically, without having any idea why is good). But as a reference, can be beneficial to see which is the predict ratio with all the variables.
+```{r q31, warning=FALSE,message=FALSE, include=T}
+train <- subset(decathlon, Competition == "Decastar")
+test <- subset(decathlon, Competition == "OlympicG")
+train <- na.omit(train)
+RegModel.1 <- lm(`1500m` ~ `100m` + `Long.jump` + `Shot.put` + `High.jump` + `400m` + 
+                  `110m.hurdle` + `Discus` + `Pole.vault` + `Javeline` +`Rank`+ `Points`,
+                data=train)
+
+summary(RegModel.1)
+
+# Linearity
+summary(RegModel.1)
+# Independence of residuals
+dwtest(RegModel.1, alternative ="two.sided") 
+# Normality 
+shapiro.test(residuals(RegModel.1)) 
+# Homoscedasticity 
+lmtest::bptest(RegModel.1) 
+#We see that pass the assumptinos...
+```
+Once the model is created and verified what we want to see is the results of this model in the test set.
+```{r q311, warning=FALSE,message=FALSE, include=T}
+
+prediction <- as.data.frame(predict(RegModel.1, newdata=test, interval="prediction"))
+prediction$difference <- sapply((test$`1500m` <= prediction$upr) & (test$`1500m` >= prediction$lwr), 
+                                ifelse, 'yes', 'no')
+
+hitRate <- sum(prediction$difference == "yes")/
+  (sum(prediction$difference == "no")+sum(prediction$difference == "yes"))
+```
+We got arround a 50% by including everything in the model (better flip a coin). Let's now analyze which variables are really relevant:
+```{r q3111, warning=FALSE,message=FALSE, include=T}
+library(factoextra)
+train$Competition <-NULL
+pca <- prcomp(train, scale = TRUE)
+summary(pca)
+fviz_pca_var(pca,
+             col.var = "contrib", # Color by contributions to the PC
+             gradient.cols = c("chartreuse", "darkgoldenrod1", "RED"),
+             repel = TRUE     # Avoid text overlapping
+             )
+```
+If we pay attention to the PCA, we can clearly see that the variables that come from similar disciplines (e.g 100m,110m hurdle,400m) need to be present in the model.Because there will be athletes that are more Speed alike, Stenght alike... and missing this in the model would be a huge mistake. Variables like Rank or Points don't add any complexity to the model since are relative to other data that we already have.
+
+Once that now we have a better idea of what model we need to represent our data I propose the following model (which could probably be improved). The main idea is to get from each quartile the most representative even that I would even say taht just with left side ones, would be enough since who is good in those, is good in 1500m.
+```{r q31111, warning=FALSE,message=FALSE, include=T}
+RegModel.1 <- lm(`1500m` ~ `Shot.put` + `High.jump` 
+                 + `110m.hurdle` + `Discus` + `Pole.vault` , data=train)
+summary(RegModel.1)
+
+# Linearity
+summary(RegModel.1)
+# Independence of residuals
+dwtest(RegModel.1, alternative ="two.sided") 
+# Normality 
+shapiro.test(residuals(RegModel.1)) 
+# Homoscedasticity 
+lmtest::bptest(RegModel.1) 
+#We see that pass the assumptinos...
+prediction <- as.data.frame(predict(RegModel.1, newdata=test, interval="prediction"))
+prediction$difference <- sapply((test$`1500m` <= prediction$upr) & (test$`1500m` >= prediction$lwr), ifelse, 'yes', 'no')
+
+hitRate <- sum(prediction$difference == "yes")/
+  (sum(prediction$difference == "no")+sum(prediction$difference == "yes"))
+hitRate
+```
+
+
+Note that the prediction interval is much larger than the confidence interval. The interval works with the performance of an athlete predicted the performance that comes after and just one after. Meanwhile the confidence interval give us information about the performances that comes later (more than one). 
+
+\newpage
+
+\section{FOURTH QUESTION: WORKING WITH REAL DATA}
+
+First we are going to set up the environment and we are going to read the downloaded data.
+```{r q5, include=T}
+setwd("C:/Users/Meyerhofer/Desktop/SMDELabs/Lab3/")
+dataset <- read.csv("dataset/marathon_results_2017.csv", sep=",", 
+                      stringsAsFactors = default.stringsAsFactors(), header = T)
+```
+
+Our target group will be men of 20-30 years. It is chosen arbitrarly (with a fast overlook at the data it is cleaner that women one). Since we have data that does
+not fit this criteria, we are going to remove it since it's not relevant to our question:
+```{r q51, include=T}
+#Removing females & Removing ages not in [20-30]years
+condition <- (dataset$Age >= 20 & dataset$Age <= 30 & dataset$M.F == "M")
+data_used = dataset[condition,]
+```
+Once selected our data to start with the process, we will first identify the labels that appear in the dataset and we will explore them to have a first insight if can be useful or not to our model (pending to justify why each one is or is not useful). Remove columns that are what we want to predict so we can't use them to generate a model
+```{r q52, include=T}
+data_used[, c("X","X.1","Citizen", "X15K", "X20K", "X25K", "X30K", 
+              "X35K", "X40K", "Half", "Pace", "Gender", "Division", "Overall", "M.F")] <- list(NULL)
+
+names(data_used)
+```
+Now that we have the data that we want, we will pass all relevant time variables to seconds in order to make it easier to work with
+
+```{r q53, include=T, warning=FALSE,message=FALSE}
+library(lubridate)
+data_used$X5K <- as.numeric(hms(data_used$X5K))
+data_used$X10K <- as.numeric(hms(data_used$X10K))
+data_used$Official.Time <- as.numeric(hms(data_used$Official.Time))
+data_used$Bib <- as.numeric(data_used$Bib)
+```
+
+Now that we have what we need and we preprocessed some of the data, we will split between train and test. This will be done in a proportion of 70-30 with a random distribution.
+```{r q54, include=T}
+set.seed(1234)
+index <- sample(nrow(data_used),nrow(data_used)*0.70)
+train <- as.data.frame(data_used[index,])
+test <- as.data.frame(data_used[-index,])
+```
+
+Now let's proceed to model our training test. Note that we have in training the Official time, but we are not going to use it. I only have it as reference. 
+
+The parameters that I am going to use are the following (this is a simple model, we are going to try more complex models later)
+\begin{itemize}
+\item X10K
+\item Bib
+\item X5K
+\end{itemize}
+
+
+```{r q55, include=T}
+model <- lm(`Official.Time` ~ `X5K` + `X10K` +`Bib`, data=train)
+```
+
+
+```{r q555, include=T}
+library("lmtest")
+# Independence of residuals
+dwtest(model, alternative ="two.sided", data=train) 
+# Normalitat 
+shapiro.test(residuals(model)) 
+# Homoscedasticity 
+lmtest::bptest(model) 
+```
+
+Once tested our model, we are going to predict our test dataset and see which is the error that our model has:
+```{r q56, include=T}
+prediction <- as.data.frame(predict(model, newdata=test, interval="prediction"))
+```
+
+We calculate the mean standart error:
+```{r q57, include=T}
+#Average of time error.
+mse <- mean(prediction$fit - test$Official.Time)^2
+
+as.hours <- function (seconds) {
+  paste(floor(seconds/3600L), floor (seconds/60L) %% 60, floor (seconds) %% 60L, sep=":")
+}
+as.hours(sqrt(mse))
+```
+We can see that our average error is of arround 2-5 minutes (depending on the seed and also on the training set).
+
+In order to select the most appropiate parameters it's usually a good idea to see with PCA which of these parameters, are the most relevant ones:
+
+```{r q5555, include=T,warning=FALSE,message=FALSE}
+pca.train <- as.data.frame(train)
+names(pca.train)
+pca.train$Name <- as.numeric(as.factor(pca.train$Name))
+pca.train$City <- as.numeric(as.factor(pca.train$City))
+pca.train$Country <- as.numeric(as.factor(pca.train$Country))
+pca.train$State <- as.numeric(as.factor(pca.train$State))
+train$State <- as.numeric(as.factor(train$Country))
+testState <- as.numeric(as.factor(test$Country))
+pca.train$Official.Time <- NULL
+pca.train$Proj.Time <- NULL
+pca.train$Age <- as.numeric(pca.train$Age)
+names(pca.train)
+pca <- prcomp(~ ., data=pca.train, na.action=na.omit, scale=TRUE)
+summary(pca)
+#install.packages("factoextra")
+library(factoextra)
+fviz_pca_var(pca, col.var = "contrib",
+             gradient.cols = c("chartreuse", "darkgoldenrod1", "RED"),
+             repel = TRUE)
+
+eig.val <- get_eigenvalue(pca)
+res.var <- get_pca_var(pca)
+res.var$contrib        # Contributions to the PCs
+```
+By the PCA we can see that  X10K and X5K are the same and we can see that the factors that contribute the most aside from the times, are the country and the state that most likely we will discard State because is very specific of USA. City is not relevant at all and Age is not relevant neither.
+
+Another model I would consider is:
+```{r q555555555, include=T}
+
+model <- lm(`Official.Time` ~ `X10K` +`Bib`+ `Age` + `Country`, data=train)
+```
+
+We see how good the model is (we should also apply the assumptions):
+```{r q56666, include=T}
+#We do this bad replacement because it would imply a work arround to make appear or labels in train that are in test.
+#So I am doing it like this even is not the best.
+test$Country[test$Country == "NED"] <- "USA"
+test$Country[test$Country == "SIN"] <- "USA"
+prediction <- as.data.frame(predict(model, newdata=test, interval="prediction"))
+```
+We calculate the mean standart error:
+```{r q577, include=T}
+#Average of time error.
+mse <- mean(prediction$fit - test$Official.Time)^2
+
+as.hours <- function (seconds) {
+  paste(floor(seconds/3600L), floor (seconds/60L) %% 60, floor (seconds) %% 60L, sep=":")
+}
+as.hours(sqrt(mse))
+```
+
+We can see that the final result has been improved a bit but I do not think personally that by adding/substracting variables of the PCA we will significantly get better. By doing this we are not creating new knowledge or highlighting something like for instance the pace that could be interesting to test (even that by having the X5K and X10K you already have it).
+
